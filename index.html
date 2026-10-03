@@ -5,7 +5,7 @@
 (function(){
 var KEY='spese_condivise_v2';
 var data=load(),view='home',modal=null,payer='',split='equal',paymentFrom='';
-function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d)return d}catch(e){}return{people:['Enrico','Claudia'],expenses:[],incomes:[],payments:[],categories:['Utenze','Spesa alimentare','Casa','Auto','Pasti fuori','Shopping','Viaggi','Spese Mediche','Svago','Regali','Mutuo','Altro']}}
+function load(){var dflt={people:['Enrico','Claudia'],expenses:[],incomes:[],payments:[],categories:['Utenze','Spesa alimentare','Casa','Auto','Pasti fuori','Shopping','Viaggi','Spese Mediche','Svago','Regali','Mutuo','Altro']};try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(!d||typeof d!=='object')return dflt;if(!Array.isArray(d.people)||d.people.length<2)d.people=dflt.people.slice();if(!Array.isArray(d.expenses))d.expenses=[];if(!Array.isArray(d.incomes))d.incomes=[];if(!Array.isArray(d.payments))d.payments=[];if(!Array.isArray(d.categories)||!d.categories.length)d.categories=dflt.categories.slice();return d}catch(e){return dflt}}
 function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
 function euro(n){return new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(Number(n)||0)}
 function today(){return new Date().toISOString().slice(0,10)}
@@ -40,5 +40,5 @@ function savePayment(){var a=Number(document.getElementById('pa').value);if(!a)r
 function savePeople(){var a=document.getElementById('p1').value.trim(),b=document.getElementById('p2').value.trim();if(!a||!b)return alert('Inserisci entrambi i nomi.');data.people=[a,b];save();closeModal()}
 function delExp(id){if(confirm('Eliminare la spesa?')){data.expenses=data.expenses.filter(function(e){return e.id!==id});save()}}
 window.openExpense=openExpense;window.openIncome=openIncome;window.openPayment=openPayment;window.openPeople=openPeople;window.closeModal=closeModal;window.go=go;window.setSplit=setSplit;window.saveExpense=saveExpense;window.saveIncome=saveIncome;window.savePayment=savePayment;window.chooseFrom=chooseFrom;window.savePeople=savePeople;window.delExp=delExp;
-render();
+try{render()}catch(e){document.getElementById('root').innerHTML='<div style="padding:24px;font-family:system-ui"><h2>Errore nell\'app</h2><p>La pagina è stata caricata ma i dati locali non sono compatibili.</p><button onclick="localStorage.removeItem(\'spese_condivise_v2\');location.reload()" style="padding:12px 16px;border:0;border-radius:10px;background:#173f35;color:#fff;font-weight:700">Ripristina app</button></div>'}
 })();</script></body></html>
