@@ -5,7 +5,7 @@
 (function(){
 var KEY='spese_condivise_v2';
 var data=load(),view='home',modal=null,payer='',split='equal',paymentFrom='';
-function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d)return d}catch(e){}return{people:['Io','Partner'],expenses:[],incomes:[],payments:[],categories:['Utenze','Spesa alimentare','Casa','Auto','Pasti fuori','Shopping','Viaggi','Spese Mediche','Svago','Regali','Mutuo','Altro']}}
+function load(){try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(d)return d}catch(e){}return{people:['Enrico','Claudia'],expenses:[],incomes:[],payments:[],categories:['Utenze','Spesa alimentare','Casa','Auto','Pasti fuori','Shopping','Viaggi','Spese Mediche','Svago','Regali','Mutuo','Altro']}}
 function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
 function euro(n){return new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(Number(n)||0)}
 function today(){return new Date().toISOString().slice(0,10)}
