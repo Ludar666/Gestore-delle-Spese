@@ -149,14 +149,14 @@ async function delIncome(id){
 if(!confirm("Eliminare l'entrata?"))return;
 if(!currentMember)return;
 var r=await supabaseClient.from('incomes').delete().eq('id',id).eq('household_id',currentMember.household_id);
-if(r.error)return alert('Errore nell'eliminazione online: '+r.error.message);
+if(r.error)return alert("Errore nell'eliminazione online: "+r.error.message);
 await syncFromServer();render()
 }
 async function delPayment(id){
 if(!confirm('Eliminare il pagamento?'))return;
 if(!currentMember)return;
 var r=await supabaseClient.from('payments').delete().eq('id',id).eq('household_id',currentMember.household_id);
-if(r.error)return alert('Errore nell'eliminazione online: '+r.error.message);
+if(r.error)return alert("Errore nell'eliminazione online: "+r.error.message);
 await syncFromServer();render()
 }
 window.login=login;window.logout=logout;window.openExpense=openExpense;window.openIncome=openIncome;window.openPayment=openPayment;window.openPeople=openPeople;window.closeModal=closeModal;window.go=go;window.setMoveWho=setMoveWho;window.setMoveCat=setMoveCat;window.setChartPeriod=setChartPeriod;window.setChartWho=setChartWho;window.setChartCat=setChartCat;window.setSplit=setSplit;window.saveExpense=saveExpense;window.saveIncome=saveIncome;window.savePayment=savePayment;window.chooseFrom=chooseFrom;window.savePeople=savePeople;window.delExp=delExp;window.delIncome=delIncome;window.delPayment=delPayment;
