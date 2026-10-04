@@ -11,7 +11,7 @@ window.supabaseClient=supabaseClient;
 <script>
 (function(){
 var KEY='spese_condivise_v2';
-var data=load(),view='home',modal=null,payer='',split='equal',paymentFrom='',moveWho='all',moveCat='all',chartPeriod='year',chartWho='all',chartCats=[];
+var data=load(),view='home',modal=null,payer='',split='equal',paymentFrom='',moveWho='all',moveCat='all',chartPeriod='year',chartWho='all',chartCats=[],currentUser=null,currentMember=null,authReady=false,authBusy=false,authError='';
 function load(){var dflt={people:['Enrico','Claudia'],expenses:[],incomes:[],payments:[],categories:['Utenze','Spesa alimentare','Casa','Auto','Pasti fuori','Shopping','Viaggi','Spese Mediche','Svago','Regali','Mutuo','Altro']};try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(!d||typeof d!=='object')return dflt;if(!Array.isArray(d.people)||d.people.length<2)d.people=dflt.people.slice();if(!Array.isArray(d.expenses))d.expenses=[];if(!Array.isArray(d.incomes))d.incomes=[];if(!Array.isArray(d.payments))d.payments=[];if(!Array.isArray(d.categories)||!d.categories.length)d.categories=dflt.categories.slice();return d}catch(e){return dflt}}
 function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
 function euro(n){return new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(Number(n)||0)}
@@ -36,7 +36,29 @@ function incomeModal(){return modalShell('Nuova entrata','<div class="form"><div
 function paymentModal(){paymentFrom=data.people[1];return modalShell('Registra pagamento','<div class="form"><div class="field"><label>Chi paga?</label><div class="choices"><button id="pf" class="sel" onclick="chooseFrom(\''+esc(data.people[1])+'\')">'+esc(data.people[1])+'</button><button id="pt" onclick="chooseFrom(\''+esc(data.people[0])+'\')">'+esc(data.people[0])+'</button></div></div><div class="field"><label>Importo</label><input id="pa" type="number" step="0.01"></div><div class="field"><label>Data</label><input id="pdt" type="date" value="'+today()+'"></div><div class="field"><label>Descrizione</label><input id="pd" placeholder="Es. Bonifico"></div><button class="btn primary full" onclick="savePayment()">Registra pagamento</button></div>')}
 function peopleModal(){return modalShell('Persone','<div class="form"><div class="field"><label>Persona principale</label><input id="p1" value="'+esc(data.people[0])+'"></div><div class="field"><label>Persona condivisa</label><input id="p2" value="'+esc(data.people[1])+'"></div><button class="btn primary full" onclick="savePeople()">Salva</button></div>')}
 function setMoveWho(x){moveWho=x;render()}function setMoveCat(x){moveCat=x;render()}function setChartPeriod(x){chartPeriod=x;render()}function setChartWho(x){chartWho=x;render()}function setChartCat(x){if(x==='all'){chartCats=[]}else{var i=chartCats.indexOf(x);if(i>=0)chartCats.splice(i,1);else chartCats.push(x)}render()}function modalHtml(){if(modal==='expense')return expenseModal();if(modal==='income')return incomeModal();if(modal==='payment')return paymentModal();return peopleModal()}
-function render(){document.getElementById('root').innerHTML='<div class="app">'+top()+(view==='home'?home():view==='moves'?moves():view==='chart'?chart():more())+nav()+(modal?modalHtml():'')+'</div>';bind()}
+function authScreen(){
+return '<div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px"><div class="card" style="width:100%;max-width:420px;padding:24px"><div class="brand">Spese Condivise</div><div class="sub" style="margin-bottom:22px">Accedi per condividere le spese con Enrico e Claudia.</div><div class="field"><label>Email</label><input id="loginEmail" type="email" autocomplete="email" placeholder="La tua email"></div><div class="field"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="La tua password"></div>'+(authError?'<div class="hint" style="margin-bottom:12px;color:var(--red)">'+esc(authError)+'</div>':'')+'<button class="btn primary full" onclick="login()">Accedi</button></div></div>'
+}
+async function login(){
+if(authBusy)return;
+var email=(document.getElementById('loginEmail')||{}).value||'',password=(document.getElementById('loginPassword')||{}).value||'';
+if(!email||!password){authError='Inserisci email e password.';render();return}
+authBusy=true;authError='';render();
+var r=await supabaseClient.auth.signInWithPassword({email:email.trim(),password:password});
+authBusy=false;
+if(r.error){authError='Email o password non corrette.';render();return}
+await loadAuthUser();
+}
+async function logout(){await supabaseClient.auth.signOut();currentUser=null;currentMember=null;authError='';render()}
+async function loadAuthUser(){
+var s=await supabaseClient.auth.getSession();
+currentUser=s.data.session?s.data.session.user:null;
+if(!currentUser){authReady=true;render();return}
+var r=await supabaseClient.from('members').select('id,name,household_id').eq('user_id',currentUser.id).maybeSingle();
+if(r.error){authError='Accesso riuscito, ma non riesco a leggere il profilo.';currentMember=null}else currentMember=r.data;
+authReady=true;render();
+}
+function render(){if(!authReady){document.getElementById('root').innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui;color:var(--muted)">Caricamento…</div>';return}if(!currentUser){document.getElementById('root').innerHTML=authScreen();return}document.getElementById('root').innerHTML='<div class="app">'+top()+(view==='home'?home():view==='moves'?moves():view==='chart'?chart():more())+nav()+(modal?modalHtml():'')+'</div>';bind()}
 function bind(){document.querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){payer=b.getAttribute('data-p');document.querySelectorAll('[data-p]').forEach(function(x){x.classList.toggle('sel',x===b)})}});document.querySelectorAll('.checks input').forEach(function(x){x.onchange=function(){x.parentElement.classList.toggle('sel',x.checked)}})}
 function openExpense(){modal='expense';render()}function openIncome(){modal='income';render()}function openPayment(){modal='payment';render()}function openPeople(){modal='people';render()}function closeModal(){modal=null;render()}function go(v){view=v;render()}
 function setSplit(m){split=m;document.getElementById('eq').classList.toggle('sel',m==='equal');document.getElementById('cu').classList.toggle('sel',m==='custom');if(m==='custom'){var ps=[].slice.call(document.querySelectorAll('.checks input:checked')).map(function(x){return x.value});document.getElementById('shares').innerHTML=ps.map(function(p){return'<div class="field"><label>Quota '+esc(p)+'</label><input class="share" data-person="'+esc(p)+'" type="number" step="0.01"></div>'}).join('')}else document.getElementById('shares').innerHTML=''}
@@ -46,6 +68,6 @@ function chooseFrom(p){paymentFrom=p;document.getElementById('pf').classList.tog
 function savePayment(){var a=Number(document.getElementById('pa').value);if(!a)return alert('Inserisci un importo.');var to=paymentFrom===data.people[0]?data.people[1]:data.people[0];data.payments.unshift({id:Date.now(),amount:a,date:document.getElementById('pdt').value,desc:document.getElementById('pd').value,from:paymentFrom,to:to});save();closeModal()}
 function savePeople(){var a=document.getElementById('p1').value.trim(),b=document.getElementById('p2').value.trim();if(!a||!b)return alert('Inserisci entrambi i nomi.');data.people=[a,b];save();closeModal()}
 function delExp(id){if(confirm('Eliminare la spesa?')){data.expenses=data.expenses.filter(function(e){return e.id!==id});save()}}
-window.openExpense=openExpense;window.openIncome=openIncome;window.openPayment=openPayment;window.openPeople=openPeople;window.closeModal=closeModal;window.go=go;window.setMoveWho=setMoveWho;window.setMoveCat=setMoveCat;window.setChartPeriod=setChartPeriod;window.setChartWho=setChartWho;window.setChartCat=setChartCat;window.setSplit=setSplit;window.saveExpense=saveExpense;window.saveIncome=saveIncome;window.savePayment=savePayment;window.chooseFrom=chooseFrom;window.savePeople=savePeople;window.delExp=delExp;
-try{render()}catch(e){document.getElementById('root').innerHTML='<div style="padding:24px;font-family:system-ui"><h2>Errore nell\'app</h2><p>La pagina è stata caricata ma i dati locali non sono compatibili.</p><button onclick="localStorage.removeItem(\'spese_condivise_v2\');location.reload()" style="padding:12px 16px;border:0;border-radius:10px;background:#173f35;color:#fff;font-weight:700">Ripristina app</button></div>'}
+window.login=login;window.logout=logout;window.openExpense=openExpense;window.openIncome=openIncome;window.openPayment=openPayment;window.openPeople=openPeople;window.closeModal=closeModal;window.go=go;window.setMoveWho=setMoveWho;window.setMoveCat=setMoveCat;window.setChartPeriod=setChartPeriod;window.setChartWho=setChartWho;window.setChartCat=setChartCat;window.setSplit=setSplit;window.saveExpense=saveExpense;window.saveIncome=saveIncome;window.savePayment=savePayment;window.chooseFrom=chooseFrom;window.savePeople=savePeople;window.delExp=delExp;
+supabaseClient.auth.onAuthStateChange(function(){setTimeout(loadAuthUser,0)});loadAuthUser();try{render()}catch(e){document.getElementById('root').innerHTML='<div style="padding:24px;font-family:system-ui"><h2>Errore nell\'app</h2><p>La pagina è stata caricata ma i dati locali non sono compatibili.</p><button onclick="localStorage.removeItem(\'spese_condivise_v2\');location.reload()" style="padding:12px 16px;border:0;border-radius:10px;background:#173f35;color:#fff;font-weight:700">Ripristina app</button></div>'}
 })();</script></body></html>
