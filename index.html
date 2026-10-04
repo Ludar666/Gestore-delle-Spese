@@ -59,149 +59,67 @@ if(moveWho!=='all')a=a.filter(function(x){return x.kind==='expense'?x.obj.paidBy
 if(moveCat!=='all')a=a.filter(function(x){return x.kind==='expense'&&x.obj.category===moveCat});
 return'<div class="content"><div class="row"><div class="section">Movimenti</div><button class="btn secondary" onclick="openExpense()">＋ Spesa</button></div><div class="filterTitle">Periodo</div>'+periodControls('move',movePeriod,moveYear,movePart,moveStart,moveEnd,'setMovePeriod')+'<div class="filterTitle">Chi</div><div class="filterbar"><button class="'+(moveWho==='all'?'sel':'')+'" onclick="setMoveWho(\'all\')">Tutti</button>'+data.people.map(function(p){return'<button class="'+(moveWho===p?'sel':'')+'" onclick="setMoveWho(\''+esc(p)+'\')">'+esc(p)+'</button>'}).join('')+'</div><div class="filterbar"><button class="'+(moveCat==='all'?'sel':'')+'" onclick="setMoveCat(\'all\')">Tutte le categorie</button>'+data.categories.map(function(cat){return'<button class="'+(moveCat===cat?'sel':'')+'" onclick="setMoveCat(\''+esc(cat)+'\')">'+esc(cat)+'</button>'}).join('')+'</div><div class="card">'+(a.length?a.map(function(x){return x.kind==='expense'?expRow(x.obj):x.kind==='income'?incomeRow(x.obj):paymentRow(x.obj)}).join(''):'<div class="empty">Nessun movimento con questi filtri.</div>')+'</div></div>'
 }
-function balance(){var a=data.people[0],b=data.people[1],n=net(a);return'<div class="content"><div class="card"><div class="label">'+esc(a)+' ↔ '+esc(b)+'</div><div class="balance">'+(n>=0?'+':'−')+euro(Math.abs(n))+'</div><div class="hint">'+esc(sentence())+'</div><button class="btn primary full" style="margin-top:12px" onclick="openPayment()">💸 Registra pagamento</button></div><div class="section">Dettaglio spese condivise</div><div class="card">'+data.expenses.filter(function(e){return e.participants.indexOf(a)>=0&&e.participants.indexOf(b)>=0}).map(function(e){return'<div class="expense"><div class="row"><b>'+esc(e.desc)+'</b><b>'+euro(e.amount)+'</b></div><div class="meta">'+esc(e.paidBy)+' ha pagato · quota '+esc(a)+': '+euro(share(e,a))+' · quota '+esc(b)+': '+euro(share(e,b))+'</div></div>'}).join('')+'</div></div>'}
-function more(){return'<div class="content"><div class="section">Impostazioni</div><div class="card"><div class="row"><span><b>'+esc(data.people[0])+'</b><br><span class="meta">Soggetto principale</span></span><button class="btn secondary" onclick="openPeople()">Modifica</button></div><div class="row" style="margin-top:14px"><span><b>'+esc(data.people[1])+'</b><br><span class="meta">Persona condivisa</span></span><button class="btn secondary" onclick="openPeople()">Modifica</button></div></div><div class="section">Categorie</div><div class="card"><div class="row"><span><b>'+esc(data.people[0])+'</b><br><span class="meta">Persona principale</span></span><button class="btn secondary" onclick="openPeople()">Modifica</button></div><div class="row" style="margin-top:14px"><span><b>'+esc(data.people[1])+'</b><br><span class="meta">Persona condivisa</span></span><button class="btn secondary" onclick="openPeople()">Modifica</button></div></div><div class="section">Categorie</div><div class="card">'+data.categories.map(function(c){return'<span style="display:inline-block;padding:5px 8px;margin:3px;border-radius:20px;background:#edf2ef;font-size:11px">'+esc(c)+'</span>'}).join('')+'</div></div>'}
-function modalShell(t,b){return'<div class="modalbg" onclick="if(event.target===this)closeModal()"><div class="modal"><button class="close" onclick="closeModal()">×</button><h2>'+t+'</h2>'+b+'</div></div>'}
-function expenseModal(){payer=data.people[0];split='equal';return modalShell('Nuova spesa','<div class="form"><div class="field"><label>Importo</label><input id="ea" type="number" step="0.01" min="0" placeholder="0,00"></div><div class="field"><label>Descrizione</label><input id="ed" placeholder="Es. Supermercato"></div><div class="field"><label>Categoria</label><select id="ec">'+data.categories.map(function(c){return'<option>'+esc(c)+'</option>'}).join('')+'</select></div><div class="field"><label>Data</label><input id="edate" type="date" value="'+today()+'"></div><div class="field"><label>Pagata da</label><div class="choices">'+data.people.map(function(p,i){return'<button class="'+(i===0?'sel':'')+'" data-p="'+esc(p)+'">👤 '+esc(p)+'</button>'}).join('')+'</div></div><div class="field"><label>Divisa tra</label><div class="checks">'+data.people.map(function(p){return'<label class="sel"><input type="checkbox" value="'+esc(p)+'" checked> '+esc(p)+'</label>'}).join('')+'</div></div><div class="field"><label>Divisione</label><div class="choices"><button id="eq" class="sel" onclick="setSplit(\'equal\')">Quote uguali</button><button id="cu" onclick="setSplit(\'custom\')">Quote personalizzate</button></div></div><div id="shares"></div><div class="field"><label>Note</label><input id="en" placeholder="Opzionale"></div><button class="btn primary full" onclick="saveExpense()">Salva spesa</button></div>')}
-function incomeModal(){return modalShell('Nuova entrata','<div class="form"><div class="field"><label>Importo</label><input id="ia" type="number" step="0.01"></div><div class="field"><label>Descrizione</label><input id="id" placeholder="Es. Stipendio"></div><div class="field"><label>Data</label><input id="idt" type="date" value="'+today()+'"></div><button class="btn primary full" onclick="saveIncome()">Salva entrata</button></div>')}
-function paymentModal(){paymentFrom=data.people[1];return modalShell('Registra pagamento','<div class="form"><div class="field"><label>Chi paga?</label><div class="choices"><button id="pf" class="sel" onclick="chooseFrom(\''+esc(data.people[1])+'\')">'+esc(data.people[1])+'</button><button id="pt" onclick="chooseFrom(\''+esc(data.people[0])+'\')">'+esc(data.people[0])+'</button></div></div><div class="field"><label>Importo</label><input id="pa" type="number" step="0.01"></div><div class="field"><label>Data</label><input id="pdt" type="date" value="'+today()+'"></div><div class="field"><label>Descrizione</label><input id="pd" placeholder="Es. Bonifico"></div><button class="btn primary full" onclick="savePayment()">Registra pagamento</button></div>')}
-function peopleModal(){return modalShell('Persone','<div class="form"><div class="field"><label>Persona principale</label><input id="p1" value="'+esc(data.people[0])+'"></div><div class="field"><label>Persona condivisa</label><input id="p2" value="'+esc(data.people[1])+'"></div><button class="btn primary full" onclick="savePeople()">Salva</button></div>')}
-function setMovePeriod(x){movePeriod=x;render()}function setMovePeriodPart(x){movePart=Number(x);render()}function setMovePeriodYear(x){moveYear=Number(x);render()}function setMovePeriodStart(x){moveStart=x;render()}function setMovePeriodEnd(x){moveEnd=x;render()}function setMoveWho(x){moveWho=x;render()}function setMoveCat(x){moveCat=x;render()}function setChartPeriod(x){chartPeriod=x;render()}function setChartPeriodPart(x){chartPart=Number(x);render()}function setChartPeriodYear(x){chartYear=Number(x);render()}function setChartPeriodStart(x){chartStart=x;render()}function setChartPeriodEnd(x){chartEnd=x;render()}function setChartCatByIndex(i){var x=data.categories[i];if(!x)return;setChartCat(x)}function setChartWho(x){chartWho=x;render()}function setChartCat(x){if(x==='all'){chartCats=[]}else{var i=chartCats.indexOf(x);if(i>=0)chartCats.splice(i,1);else chartCats.push(x)}render()}function modalHtml(){if(modal==='expense')return expenseModal();if(modal==='income')return incomeModal();if(modal==='payment')return paymentModal();return peopleModal()}
-function authScreen(){
-return '<div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px"><div class="card" style="width:100%;max-width:420px;padding:24px"><div class="brand">Spese Condivise</div><div class="sub" style="margin-bottom:22px">Accedi per condividere le spese con Enrico e Claudia.</div><div class="field"><label>Email</label><input id="loginEmail" type="email" autocomplete="email" placeholder="La tua email"></div><div class="field"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="La tua password"></div>'+(authError?'<div class="hint" style="margin-bottom:12px;color:var(--red)">'+esc(authError)+'</div>':'')+'<button class="btn primary full" onclick="login()">Accedi</button></div></div>'
-}
-async function login(){
-if(authBusy)return;
-var email=(document.getElementById('loginEmail')||{}).value||'',password=(document.getElementById('loginPassword')||{}).value||'';
-if(!email||!password){authError='Inserisci email e password.';render();return}
-authBusy=true;authError='';render();
-var r=await supabaseClient.auth.signInWithPassword({email:email.trim(),password:password});
-authBusy=false;
-if(r.error){authError='Email o password non corrette.';render();return}
-await loadAuthUser();
-}
-async function logout(){await supabaseClient.auth.signOut();currentUser=null;currentMember=null;authError='';render()}
-async function syncFromServer(){
-if(!currentMember)return;
-var h=currentMember.household_id;
-var results=await Promise.all([
-supabaseClient.from('members').select('id,name,household_id').eq('household_id',h).order('id'),
-supabaseClient.from('categories').select('id,name,active').eq('household_id',h).eq('active',true).order('id'),
-supabaseClient.from('expenses').select('id,amount,description,category_id,date,paid_by_member_id,inserted_by_user_id,split_type,note').eq('household_id',h).order('date',{ascending:false}),
-supabaseClient.from('expense_shares').select('id,expense_id,member_id,amount').order('id'),
-supabaseClient.from('payments').select('id,household_id,from_member_id,to_member_id,amount,date,note').eq('household_id',h).order('date',{ascending:false}),
-supabaseClient.from('incomes').select('id,household_id,member_id,amount,date,description').eq('household_id',h).order('date',{ascending:false})
-]);
-var bad=results.find(function(r){return r.error});if(bad)throw bad.error;
-var members=results[0].data||[],cats=results[1].data||[],exs=results[2].data||[],shares=results[3].data||[],pays=results[4].data||[],incs=results[5].data||[];
-var byId={};members.forEach(function(m){byId[m.id]=m.name});
-var catById={};cats.forEach(function(x){catById[x.id]=x.name});
-var sharesBy={};shares.forEach(function(s){(sharesBy[s.expense_id]||(sharesBy[s.expense_id]=[])).push(s)});
-data.people=members.map(function(m){return m.name});
-if(data.people.length<2)data.people=['Enrico','Claudia'];
-data.categories=cats.map(function(x){return x.name});
-data.expenses=exs.map(function(e){
-var ss=sharesBy[e.id]||[], participants=ss.map(function(s){return byId[s.member_id]}).filter(Boolean), sh={};
-ss.forEach(function(s){sh[byId[s.member_id]]=Number(s.amount)});
-return{id:e.id,amount:Number(e.amount),date:e.date,desc:e.description,category:catById[e.category_id]||'Altro',paidBy:byId[e.paid_by_member_id]||'',insertedBy:currentUser.id,participants:participants,split:e.split_type,shares:sh,note:e.note||''}
-});
-data.payments=pays.map(function(p){return{id:p.id,amount:Number(p.amount),date:p.date,desc:p.note||'Pagamento',from:byId[p.from_member_id]||'',to:byId[p.to_member_id]||''}});
-data.incomes=incs.map(function(i){return{id:i.id,amount:Number(i.amount),date:i.date,desc:i.description,member:byId[i.member_id]||''}});
-localStorage.setItem(KEY,JSON.stringify(data));
-}
-async function loadAuthUser(){
-var s=await supabaseClient.auth.getSession();
-currentUser=s.data.session?s.data.session.user:null;
-if(!currentUser){authReady=true;render();return}
-var r=await supabaseClient.from('members').select('id,name,household_id').eq('user_id',currentUser.id).maybeSingle();
-if(r.error){authError='Accesso riuscito, ma non riesco a leggere il profilo.';currentMember=null}
-else{
-currentMember=r.data;
-try{await syncFromServer();authError=''}catch(e){authError='Accesso riuscito, ma non riesco a sincronizzare i dati.'}
-}
-authReady=true;render();
-}
-function render(){if(!authReady){document.getElementById('root').innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui;color:var(--muted)">Caricamento…</div>';return}if(!currentUser){document.getElementById('root').innerHTML=authScreen();return}document.getElementById('root').innerHTML='<div class="app">'+top()+(view==='home'?home():view==='moves'?moves():view==='chart'?chart():more())+nav()+(modal?modalHtml():'')+'</div>';bind()}
-function bind(){document.querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){payer=b.getAttribute('data-p');document.querySelectorAll('[data-p]').forEach(function(x){x.classList.toggle('sel',x===b)})}});document.querySelectorAll('.checks input').forEach(function(x){x.onchange=function(){x.parentElement.classList.toggle('sel',x.checked)}})}
-function openExpense(){modal='expense';render()}function openIncome(){modal='income';render()}function openPayment(){modal='payment';render()}function openPeople(){modal='people';render()}function closeModal(){modal=null;render()}function go(v){view=v;render()}
-function setSplit(m){split=m;document.getElementById('eq').classList.toggle('sel',m==='equal');document.getElementById('cu').classList.toggle('sel',m==='custom');if(m==='custom'){var ps=[].slice.call(document.querySelectorAll('.checks input:checked')).map(function(x){return x.value});document.getElementById('shares').innerHTML=ps.map(function(p){return'<div class="field"><label>Quota '+esc(p)+'</label><input class="share" data-person="'+esc(p)+'" type="number" step="0.01"></div>'}).join('')}else document.getElementById('shares').innerHTML=''}
-async function saveExpense(){
-var amount=Number(document.getElementById('ea').value),ps=[].slice.call(document.querySelectorAll('.checks input:checked')).map(function(x){return x.value});
-if(!amount||!ps.length)return alert('Inserisci importo e partecipanti.');
-var shares={};if(split==='equal')ps.forEach(function(p){shares[p]=amount/ps.length});else document.querySelectorAll('.share').forEach(function(x){shares[x.dataset.person]=Number(x.value||0)});
-var sum=Object.values(shares).reduce(function(a,x){return a+x},0);if(Math.abs(sum-amount)>.01)return alert('Le quote devono sommare '+euro(amount));
-if(!currentMember)return alert('Profilo non sincronizzato.');
-var catName=document.getElementById('ec').value,cat=await supabaseClient.from('categories').select('id').eq('household_id',currentMember.household_id).eq('name',catName).maybeSingle();
-if(cat.error||!cat.data)return alert('Categoria non disponibile sul server.');
-var paidMember=(await supabaseClient.from('members').select('id').eq('household_id',currentMember.household_id).eq('name',payer).maybeSingle());
-if(paidMember.error||!paidMember.data)return alert('Persona non disponibile sul server.');
-var ins=await supabaseClient.from('expenses').insert({household_id:currentMember.household_id,amount:amount,description:document.getElementById('ed').value||'Spesa',category_id:cat.data.id,date:document.getElementById('edate').value,paid_by_member_id:paidMember.data.id,inserted_by_user_id:currentUser.id,split_type:split,note:document.getElementById('en').value||null}).select('id').single();
-if(ins.error)return alert('Errore nel salvataggio online: '+ins.error.message);
-var rows=ps.map(function(p){return{expense_id:ins.data.id,member_id:null,amount:shares[p]}});
-var mems=await supabaseClient.from('members').select('id,name').eq('household_id',currentMember.household_id);
-if(mems.error)return alert('Spesa salvata, ma non riesco a leggere i partecipanti.');
-rows.forEach(function(r){var m=mems.data.find(function(x){return x.name===ps[rows.indexOf(r)]});if(m)r.member_id=m.id});
-if(rows.some(function(r){return !r.member_id})){await supabaseClient.from('expenses').delete().eq('id',ins.data.id);return alert('Partecipante non disponibile sul server.');}
-var sr=await supabaseClient.from('expense_shares').insert(rows);
-if(sr.error){await supabaseClient.from('expenses').delete().eq('id',ins.data.id);return alert('Errore nel salvataggio delle quote: '+sr.error.message);}
-await syncFromServer();modal=null;render();
-}
-async function saveIncome(){
-var a=Number(document.getElementById('ia').value);if(!a)return alert('Inserisci un importo.');if(!currentMember)return alert('Profilo non sincronizzato.');
-var r=await supabaseClient.from('incomes').insert({household_id:currentMember.household_id,member_id:currentMember.id,amount:a,date:document.getElementById('idt').value,description:document.getElementById('id').value||'Entrata'});
-if(r.error)return alert('Errore nel salvataggio online: '+r.error.message);await syncFromServer();modal=null;render()
-}
-function chooseFrom(p){paymentFrom=p;document.getElementById('pf').classList.toggle('sel',p===data.people[1]);document.getElementById('pt').classList.toggle('sel',p===data.people[0])}
-async function savePayment(){
-var a=Number(document.getElementById('pa').value);if(!a)return alert('Inserisci un importo.');if(!currentMember)return alert('Profilo non sincronizzato.');var to=paymentFrom===data.people[0]?data.people[1]:data.people[0];
-var ms=await supabaseClient.from('members').select('id,name').eq('household_id',currentMember.household_id);if(ms.error)return alert('Errore nel caricamento delle persone.');
-var fromM=ms.data.find(function(x){return x.name===paymentFrom}),toM=ms.data.find(function(x){return x.name===to});if(!fromM||!toM)return alert('Persona non disponibile sul server.');
-var r=await supabaseClient.from('payments').insert({household_id:currentMember.household_id,from_member_id:fromM.id,to_member_id:toM.id,amount:a,date:document.getElementById('pdt').value,note:document.getElementById('pd').value||null});
-if(r.error)return alert('Errore nel salvataggio online: '+r.error.message);await syncFromServer();modal=null;render()
-}
-function savePeople(){var a=document.getElementById('p1').value.trim(),b=document.getElementById('p2').value.trim();if(!a||!b)return alert('Inserisci entrambi i nomi.');data.people=[a,b];save();closeModal()}
-async function delExp(id){
-if(!confirm('Eliminare la spesa?'))return;
-var r=await supabaseClient.from('expenses').delete().eq('id',id).eq('household_id',currentMember.household_id);
-if(r.error)return alert('Errore nell\'eliminazione online: '+r.error.message);
-await syncFromServer();render()
-}
-async function delIncome(id){
-if(!confirm("Eliminare l'entrata?"))return;
-if(!currentMember)return;
-var r=await supabaseClient.from('incomes').delete().eq('id',id).eq('household_id',currentMember.household_id);
-if(r.error)return alert("Errore nell'eliminazione online: "+r.error.message);
-await syncFromServer();render()
-}
-async function delPayment(id){
-if(!confirm('Eliminare il pagamento?'))return;
-if(!currentMember)return;
-var r=await supabaseClient.from('payments').delete().eq('id',id).eq('household_id',currentMember.household_id);
-if(r.error)return alert("Errore nell'eliminazione online: "+r.error.message);
-await syncFromServer();render()
-}
-window.login=login;window.logout=logout;window.openExpense=openExpense;window.openIncome=openIncome;window.openPayment=openPayment;window.openPeople=openPeople;window.closeModal=closeModal;window.go=go;window.setMoveWho=setMoveWho;window.setMoveCat=setMoveCat;window.setChartPeriod=setChartPeriod;window.setChartWho=setChartWho;window.setChartCat=setChartCat;window.setSplit=setSplit;window.saveExpense=saveExpense;window.saveIncome=saveIncome;window.savePayment=savePayment;window.chooseFrom=chooseFrom;window.savePeople=savePeople;window.delExp=delExp;window.delIncome=delIncome;window.delPayment=delPayment;
-supabaseClient.auth.onAuthStateChange(function(){setTimeout(loadAuthUser,0)});loadAuthUser();try{render()}catch(e){document.getElementById('root').innerHTML='<div style="padding:24px;font-family:system-ui"><h2>Errore nell\'app</h2><p>La pagina è stata caricata ma i dati locali non sono compatibili.</p><button onclick="localStorage.removeItem(\'spese_condivise_v2\');location.reload()" style="padding:12px 16px;border:0;border-radius:10px;background:#173f35;color:#fff;font-weight:700">Ripristina app</button></div>'}
-})();</script></body></htmlfunction chart(){
+function chart(){
 var now=new Date(),pr=periodRange(chartPeriod,chartYear,chartPart,chartStart,chartEnd),selected=chartCats.length>0;
-var ex=data.expenses.filter(function(e){var d=new Date(e.date+'T12:00:00');return d>=pr.s&&d<=pr.e&&(chartWho==='all'||String(e.paidBy||'').trim().toLowerCase()===String(chartWho||'').trim().toLowerCase())&&(!selected||chartCats.indexOf(e.category)>=0)});
-var inc=data.incomes.filter(function(e){var d=new Date(e.date+'T12:00:00');return d>=pr.s&&d<=pr.e&&(chartWho==='all'||e.member===chartWho)});
+var ex=data.expenses.filter(function(e){
+  var d=new Date(e.date+'T12:00:00');
+  return d>=pr.s&&d<=pr.e &&
+    (chartWho==='all'||String(e.paidBy||'').trim().toLowerCase()===String(chartWho||'').trim().toLowerCase()) &&
+    (!selected||chartCats.indexOf(e.category)>=0)
+});
+var inc=data.incomes.filter(function(e){
+  var d=new Date(e.date+'T12:00:00');
+  return d>=pr.s&&d<=pr.e&&(chartWho==='all'||e.member===chartWho)
+});
 var months=[],i;
 if(chartPeriod==='month'){
-var days=new Date(pr.e.getFullYear(),pr.e.getMonth()+1,0).getDate();
-for(i=1;i<=days;i++)months.push({key:pr.s.getFullYear()+'-'+String(pr.s.getMonth()+1).padStart(2,'0')+'-'+String(i).padStart(2,'0'),label:String(i)});
+  var days=new Date(pr.e.getFullYear(),pr.e.getMonth()+1,0).getDate();
+  for(i=1;i<=days;i++)months.push({key:pr.s.getFullYear()+'-'+String(pr.s.getMonth()+1).padStart(2,'0')+'-'+String(i).padStart(2,'0'),label:String(i)});
 }else{
-var d=new Date(pr.s.getFullYear(),pr.s.getMonth(),1);
-while(d<=pr.e){months.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:d.toLocaleDateString('it-IT',{month:'short',year:'2-digit'}));d.setMonth(d.getMonth()+1)}
+  var d=new Date(pr.s.getFullYear(),pr.s.getMonth(),1);
+  while(d<=pr.e){
+    months.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:d.toLocaleDateString('it-IT',{month:'short',year:'2-digit'})});
+    d.setMonth(d.getMonth()+1)
+  }
 }
-var count=months.length,points=months.map(function(m){return{month:m.label,expenses:ex.filter(function(e){return e.date.slice(0,chartPeriod==='month'?10:7)===m.key}).reduce(function(a,e){return a+e.amount},0),income:inc.filter(function(e){return e.date.slice(0,chartPeriod==='month'?10:7)===m.key}).reduce(function(a,e){return a+e.amount},0)}}),palette=['#2878d0','#d34b4b','#2e9d61','#9b59b6','#e67e22','#16a085','#c0392b','#34495e'];
-var cats=(selected?chartCats:data.categories).map(function(cat){return{key:cat,values:months.map(function(m){return ex.filter(function(e){return e.category===cat&&e.date.slice(0,chartPeriod==='month'?10:7)===m.key}).reduce(function(a,e){return a+e.amount},0)}),total:ex.filter(function(e){return e.category===cat}).reduce(function(a,e){return a+e.amount},0)}}).filter(function(x){return x.total>0});
-var max=1;if(selected)cats.forEach(function(s){s.values.forEach(function(v){max=Math.max(max,v)})});else points.forEach(function(p){max=Math.max(max,p.income,p.expenses)});
+var count=months.length,
+points=months.map(function(m){
+  return {
+    month:m.label,
+    expenses:ex.filter(function(e){return e.date.slice(0,chartPeriod==='month'?10:7)===m.key}).reduce(function(a,e){return a+e.amount},0),
+    income:inc.filter(function(e){return e.date.slice(0,chartPeriod==='month'?10:7)===m.key}).reduce(function(a,e){return a+e.amount},0)
+  }
+}),
+palette=['#2878d0','#d34b4b','#2e9d61','#9b59b6','#e67e22','#16a085','#c0392b','#34495e'];
+var cats=(selected?chartCats:data.categories).map(function(cat){
+  return {
+    key:cat,
+    values:months.map(function(m){
+      return ex.filter(function(e){return e.category===cat&&e.date.slice(0,chartPeriod==='month'?10:7)===m.key}).reduce(function(a,e){return a+e.amount},0)
+    }),
+    total:ex.filter(function(e){return e.category===cat}).reduce(function(a,e){return a+e.amount},0)
+  }
+}).filter(function(x){return x.total>0});
+var max=1;
+if(selected)cats.forEach(function(s){s.values.forEach(function(v){max=Math.max(max,v)})});
+else points.forEach(function(p){max=Math.max(max,p.income,p.expenses)});
 function x(i){return count===1?50:(i/(count-1))*100}
 function y(v){return 96-(v/max*84)}
-var lines=selected?cats.map(function(s,si){var color=palette[si%palette.length];return'<polyline points="'+s.values.map(function(v,i){return x(i)+','+y(v)}).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'}).join(''):'<polyline points="'+points.map(function(p,i){return x(i)+','+y(p.income)}).join(' ')+'" fill="none" stroke="#2e9d61" stroke-width="2.5"/><polyline points="'+points.map(function(p,i){return x(i)+','+y(p.expenses)}).join(' ')+'" fill="none" stroke="#d34b4b" stroke-width="2.5"/>';
-var dots=selected?cats.map(function(s,si){var color=palette[si%palette.length];return s.values.map(function(v,i){return'<circle cx="'+x(i)+'" cy="'+y(v)+'" r="1.8" fill="'+color+'"/>'}).join('')}).join(''):points.map(function(p,i){return'<circle cx="'+x(i)+'" cy="'+y(p.income)+'" r="1.5" fill="#2e9d61"/><circle cx="'+x(i)+'" cy="'+y(p.expenses)+'" r="1.5" fill="#d34b4b"/>'}).join('');
-var legend=selected?cats.map(function(s,si){return'<span><i style="background:'+palette[si%palette.length]+'"></i>'+esc(s.key)+'</span>'}).join(''):'<span><i class="incomeDot"></i>Entrate</span><span><i class="expenseDot"></i>Spese</span>';
+var lines=selected
+?cats.map(function(s,si){
+  var color=palette[si%palette.length];
+  return'<polyline points="'+s.values.map(function(v,i){return x(i)+','+y(v)}).join(' ')+'" fill="none" stroke="'+color+'" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'
+}).join('')
+:'<polyline points="'+points.map(function(p,i){return x(i)+','+y(p.income)}).join(' ')+'" fill="none" stroke="#2e9d61" stroke-width="2.5"/><polyline points="'+points.map(function(p,i){return x(i)+','+y(p.expenses)}).join(' ')+'" fill="none" stroke="#d34b4b" stroke-width="2.5"/>';
+var dots=selected
+?cats.map(function(s,si){
+  var color=palette[si%palette.length];
+  return s.values.map(function(v,i){return'<circle cx="'+x(i)+'" cy="'+y(v)+'" r="1.8" fill="'+color+'"/>'}).join('')
+}).join('')
+:points.map(function(p,i){return'<circle cx="'+x(i)+'" cy="'+y(p.income)+'" r="1.5" fill="#2e9d61"/><circle cx="'+x(i)+'" cy="'+y(p.expenses)+'" r="1.5" fill="#d34b4b"/>'}).join('');
+var legend=selected
+?cats.map(function(s,si){return'<span><i style="background:'+palette[si%palette.length]+'"></i>'+esc(s.key)+'</span>'}).join('')
+:'<span><i class="incomeDot"></i>Entrate</span><span><i class="expenseDot"></i>Spese</span>';
 return'<div class="content"><div class="section">Andamento nel tempo</div><div class="chartHint">'+(selected?'Categorie selezionate':'Entrate e spese')+'</div><div class="filterTitle">Periodo</div>'+periodControls('chart',chartPeriod,chartYear,chartPart,chartStart,chartEnd,'setChartPeriod')+'<div class="filterTitle">Chi ha pagato</div><div class="filterbar"><button class="'+(chartWho==='all'?'sel':'')+'" onclick="setChartWho(\'all\')">Tutti</button>'+data.people.map(function(p){return'<button class="'+(chartWho===p?'sel':'')+'" onclick="setChartWho(\''+esc(p)+'\')">'+esc(p)+'</button>'}).join('')+'</div><div class="filterTitle">Categorie <span class="hintText">'+(selected?'Seleziona più categorie':'Nessuna selezionata = Entrate/Uscite')+'</span></div><div class="filterbar"><button class="'+(!selected?'sel':'')+'" onclick="setChartCat(\'all\')">Entrate / Uscite</button>'+data.categories.map(function(cat,i){return'<button class="'+(chartCats.indexOf(cat)>=0?'sel':'')+'" onclick="setChartCatByIndex('+i+')">'+esc(cat)+'</button>'}).join('')+'</div><div class="card chart"><div class="label">'+(selected?'Confronto tra categorie':'Entrate e spese nel periodo')+'</div><div class="linechart"><div class="linegrid"></div><div class="chartLegend">'+legend+'</div><svg class="lineSvg mainSvg" viewBox="0 0 100 100" preserveAspectRatio="none">'+lines+dots+'</svg><div class="lineLabels">'+points.map(function(p){return'<span>'+esc(p.month)+'</span>'}).join('')+'</div></div></div>'+(selected?'<div class="section">Totale categorie selezionate</div><div class="card">'+cats.sort(function(a,b){return b.total-a.total}).map(function(z){return'<div class="catbar"><div class="row"><span>'+esc(z.key)+'</span><b>'+euro(z.total)+'</b></div><div class="bartrack"><div class="barfill" style="width:'+Math.max(3,Math.round(z.total/(cats[0].total||1)*100))+'%"></div></div></div>'}).join('')+'</div>':'')+'</div>'
 }
 function balance(){var a=data.people[0],b=data.people[1],n=net(a);return'<div class="content"><div class="card"><div class="label">'+esc(a)+' ↔ '+esc(b)+'</div><div class="balance">'+(n>=0?'+':'−')+euro(Math.abs(n))+'</div><div class="hint">'+esc(sentence())+'</div><button class="btn primary full" style="margin-top:12px" onclick="openPayment()">💸 Registra pagamento</button></div><div class="section">Dettaglio spese condivise</div><div class="card">'+data.expenses.filter(function(e){return e.participants.indexOf(a)>=0&&e.participants.indexOf(b)>=0}).map(function(e){return'<div class="expense"><div class="row"><b>'+esc(e.desc)+'</b><b>'+euro(e.amount)+'</b></div><div class="meta">'+esc(e.paidBy)+' ha pagato · quota '+esc(a)+': '+euro(share(e,a))+' · quota '+esc(b)+': '+euro(share(e,b))+'</div></div>'}).join('')+'</div></div>'}
@@ -211,7 +129,22 @@ function expenseModal(){payer=data.people[0];split='equal';return modalShell('Nu
 function incomeModal(){return modalShell('Nuova entrata','<div class="form"><div class="field"><label>Importo</label><input id="ia" type="number" step="0.01"></div><div class="field"><label>Descrizione</label><input id="id" placeholder="Es. Stipendio"></div><div class="field"><label>Data</label><input id="idt" type="date" value="'+today()+'"></div><button class="btn primary full" onclick="saveIncome()">Salva entrata</button></div>')}
 function paymentModal(){paymentFrom=data.people[1];return modalShell('Registra pagamento','<div class="form"><div class="field"><label>Chi paga?</label><div class="choices"><button id="pf" class="sel" onclick="chooseFrom(\''+esc(data.people[1])+'\')">'+esc(data.people[1])+'</button><button id="pt" onclick="chooseFrom(\''+esc(data.people[0])+'\')">'+esc(data.people[0])+'</button></div></div><div class="field"><label>Importo</label><input id="pa" type="number" step="0.01"></div><div class="field"><label>Data</label><input id="pdt" type="date" value="'+today()+'"></div><div class="field"><label>Descrizione</label><input id="pd" placeholder="Es. Bonifico"></div><button class="btn primary full" onclick="savePayment()">Registra pagamento</button></div>')}
 function peopleModal(){return modalShell('Persone','<div class="form"><div class="field"><label>Persona principale</label><input id="p1" value="'+esc(data.people[0])+'"></div><div class="field"><label>Persona condivisa</label><input id="p2" value="'+esc(data.people[1])+'"></div><button class="btn primary full" onclick="savePeople()">Salva</button></div>')}
-function setMovePeriod(x){movePeriod=x;render()}function setMoveWho(x){moveWho=x;render()}function setMoveCat(x){moveCat=x;render()}function setChartPeriod(x){chartPeriod=x;render()}function setChartCatByIndex(i){var x=data.categories[i];if(!x)return;setChartCat(x)}function setChartWho(x){chartWho=x;render()}function setChartCat(x){if(x==='all'){chartCats=[]}else{var i=chartCats.indexOf(x);if(i>=0)chartCats.splice(i,1);else chartCats.push(x)}render()}function modalHtml(){if(modal==='expense')return expenseModal();if(modal==='income')return incomeModal();if(modal==='payment')return paymentModal();return peopleModal()}
+function setMovePeriod(x){movePeriod=x;render()}
+function setMovePeriodPart(x){movePart=Number(x);render()}
+function setMovePeriodYear(x){moveYear=Number(x);render()}
+function setMovePeriodStart(x){moveStart=x;render()}
+function setMovePeriodEnd(x){moveEnd=x;render()}
+function setMoveWho(x){moveWho=x;render()}
+function setMoveCat(x){moveCat=x;render()}
+function setChartPeriod(x){chartPeriod=x;render()}
+function setChartPeriodPart(x){chartPart=Number(x);render()}
+function setChartPeriodYear(x){chartYear=Number(x);render()}
+function setChartPeriodStart(x){chartStart=x;render()}
+function setChartPeriodEnd(x){chartEnd=x;render()}
+function setChartCatByIndex(i){var x=data.categories[i];if(!x)return;setChartCat(x)}
+function setChartWho(x){chartWho=x;render()}
+function setChartCat(x){if(x==='all'){chartCats=[]}else{var i=chartCats.indexOf(x);if(i>=0)chartCats.splice(i,1);else chartCats.push(x)}render()}
+function modalHtml(){if(modal==='expense')return expenseModal();if(modal==='income')return incomeModal();if(modal==='payment')return paymentModal();return peopleModal()}
 function authScreen(){
 return '<div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px"><div class="card" style="width:100%;max-width:420px;padding:24px"><div class="brand">Spese Condivise</div><div class="sub" style="margin-bottom:22px">Accedi per condividere le spese con Enrico e Claudia.</div><div class="field"><label>Email</label><input id="loginEmail" type="email" autocomplete="email" placeholder="La tua email"></div><div class="field"><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="La tua password"></div>'+(authError?'<div class="hint" style="margin-bottom:12px;color:var(--red)">'+esc(authError)+'</div>':'')+'<button class="btn primary full" onclick="login()">Accedi</button></div></div>'
 }
@@ -325,6 +258,6 @@ var r=await supabaseClient.from('payments').delete().eq('id',id).eq('household_i
 if(r.error)return alert("Errore nell'eliminazione online: "+r.error.message);
 await syncFromServer();render()
 }
-window.login=login;window.logout=logout;window.openExpense=openExpense;window.openIncome=openIncome;window.openPayment=openPayment;window.openPeople=openPeople;window.closeModal=closeModal;window.go=go;window.setMoveWho=setMoveWho;window.setMoveCat=setMoveCat;window.setChartPeriod=setChartPeriod;window.setChartWho=setChartWho;window.setChartCat=setChartCat;window.setSplit=setSplit;window.saveExpense=saveExpense;window.saveIncome=saveIncome;window.savePayment=savePayment;window.chooseFrom=chooseFrom;window.savePeople=savePeople;window.delExp=delExp;window.delIncome=delIncome;window.delPayment=delPayment;
+window.login=login;window.logout=logout;window.openExpense=openExpense;window.openIncome=openIncome;window.openPayment=openPayment;window.openPeople=openPeople;window.closeModal=closeModal;window.go=go;window.setMoveWho=setMoveWho;window.setMoveCat=setMoveCat;window.setChartPeriod=setChartPeriod;window.setChartWho=setChartWho;window.setChartCat=setChartCat;window.setSplit=setSplit;window.saveExpense=saveExpense;window.saveIncome=saveIncome;window.savePayment=savePayment;window.chooseFrom=chooseFrom;window.savePeople=savePeople;window.delExp=delExp;window.delIncome=delIncome;window.delPayment=delPayment;window.setMovePeriod=setMovePeriod;window.setMovePeriodPart=setMovePeriodPart;window.setMovePeriodYear=setMovePeriodYear;window.setMovePeriodStart=setMovePeriodStart;window.setMovePeriodEnd=setMovePeriodEnd;window.setChartPeriodPart=setChartPeriodPart;window.setChartPeriodYear=setChartPeriodYear;window.setChartPeriodStart=setChartPeriodStart;window.setChartPeriodEnd=setChartPeriodEnd;window.setChartCatByIndex=setChartCatByIndex;
 supabaseClient.auth.onAuthStateChange(function(){setTimeout(loadAuthUser,0)});loadAuthUser();try{render()}catch(e){document.getElementById('root').innerHTML='<div style="padding:24px;font-family:system-ui"><h2>Errore nell\'app</h2><p>La pagina è stata caricata ma i dati locali non sono compatibili.</p><button onclick="localStorage.removeItem(\'spese_condivise_v2\');location.reload()" style="padding:12px 16px;border:0;border-radius:10px;background:#173f35;color:#fff;font-weight:700">Ripristina app</button></div>'}
 })();</script></body></html>
