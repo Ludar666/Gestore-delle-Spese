@@ -146,7 +146,7 @@ if(r.error)return alert('Errore nell\'eliminazione online: '+r.error.message);
 await syncFromServer();render()
 }
 async function delIncome(id){
-if(!confirm('Eliminare l'entrata?'))return;
+if(!confirm("Eliminare l'entrata?"))return;
 if(!currentMember)return;
 var r=await supabaseClient.from('incomes').delete().eq('id',id).eq('household_id',currentMember.household_id);
 if(r.error)return alert('Errore nell'eliminazione online: '+r.error.message);
