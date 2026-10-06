@@ -27,15 +27,30 @@ function euro(n){return new Intl.NumberFormat('it-IT',{style:'currency',currency
 function today(){return new Date().toISOString().slice(0,10)}
 function fmtDate(s){return new Date(s+'T12:00:00').toLocaleDateString('it-IT',{day:'2-digit',month:'short'})}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]})}
-function total(){return data.expenses.reduce(function(a,e){return a+e.amount},0)}
-function paid(p){return data.expenses.filter(function(e){return e.paidBy===p}).reduce(function(a,e){return a+e.amount},0)}
+function total(){return visibleExpenses().reduce(function(a,e){return a+e.amount},0)}
+function paid(p){return visibleExpenses().filter(function(e){return e.paidBy===p}).reduce(function(a,e){return a+e.amount},0)}
 function share(e,p){if(e.participants.indexOf(p)<0)return 0;if(e.split==='equal')return e.amount/e.participants.length;return Number((e.shares||{})[p]||0)}
-function net(p){var x=paid(p)-data.expenses.reduce(function(a,e){return a+share(e,p)},0);data.payments.forEach(function(q){if(q.to===p)x-=q.amount;if(q.from===p)x+=q.amount});return x}
+function isCommonExpense(e){
+  if(!e||!e.participants)return false;
+  return data.people.length>=2 &&
+    e.participants.indexOf(data.people[0])>=0 &&
+    e.participants.indexOf(data.people[1])>=0;
+}
+function isVisibleExpense(e){
+  if(!currentMember)return true;
+  var me=currentMember.name||'';
+  return isCommonExpense(e)||e.participants.indexOf(me)>=0;
+}
+function visibleExpenses(){
+  return data.expenses.filter(isVisibleExpense);
+}
+
+function net(p){var common=data.expenses.filter(isCommonExpense);var x=common.filter(function(e){return e.paidBy===p}).reduce(function(a,e){return a+e.amount},0)-common.reduce(function(a,e){return a+share(e,p)},0);data.payments.forEach(function(q){if(q.to===p)x-=q.amount;if(q.from===p)x+=q.amount});return x}
 function sentence(){var a=data.people[0],b=data.people[1],n=net(a);if(!b)return'Configura una seconda persona.';if(Math.abs(n)<.005)return'Siete in pari.';return n>0?b+' deve '+euro(n)+' a '+a:a+' deve '+euro(-n)+' a '+b}
 function nav(){return'<button class="fab" onclick="openExpense()">＋ Nuova spesa</button><div class="nav"><div class="navin"><button class="'+(view==='home'?'active':'')+'" onclick="go(\'home\')"><span class="ico">⌂</span>Home</button><button class="'+(view==='moves'?'active':'')+'" onclick="go(\'moves\')"><span class="ico">☷</span>Movimenti</button><button class="'+(view==='chart'?'active':'')+'" onclick="go(\'chart\')"><span class="ico">▥</span>Grafico</button><button class="'+(view==='more'?'active':'')+'" onclick="go(\'more\')"><span class="ico">⚙</span>Impost.</button></div></div>'}
 function top(){return'<div class="top"><div class="brand">Gestore delle Spese</div><div class="sub">Chi ha pagato · chi deve cosa · saldi</div></div>'}
 function expRow(e){return'<div class="expense row"><div><div class="title">'+esc(e.desc||'Spesa')+'</div><div class="meta">'+fmtDate(e.date)+' · pagata da <b>'+esc(e.paidBy)+'</b></div><div class="meta">Divisa tra '+e.participants.map(esc).join(', ')+'</div></div><div style="text-align:right"><div class="amount neg">−'+euro(e.amount)+'</div><button class="danger" onclick="delExp('+e.id+')">Elimina</button></div></div>'}
-function home(){var r=data.expenses.slice(0,6);return'<div class="content"><div class="grid"><div class="card"><div class="label">Spese totali</div><div class="value">'+euro(total())+'</div></div><div class="card"><div class="label">Pagate da '+esc(data.people[0])+'</div><div class="value">'+euro(paid(data.people[0]))+'</div></div></div><div class="card" style="margin-top:10px"><div class="label">'+esc(data.people[0])+' ↔ '+esc(data.people[1]||'Partner')+'</div><div class="balance">'+(net(data.people[0])>=0?'+':'−')+euro(Math.abs(net(data.people[0])))+'</div><div class="hint">'+esc(sentence())+'</div></div><div class="section">Azioni rapide</div><div class="quick"><button onclick="openExpense()"><span class="quickico quickadd">＋</span><b>Nuova spesa</b></button><button onclick="openIncome()"><span class="quickico">💰</span><b>Nuova entrata</b></button><button onclick="openPayment()"><span class="quickico">💸</span><b>Registra pagamento</b></button><button onclick="go(\'moves\')"><span class="quickico">📋</span><b>Storico</b></button></div><div class="section">Ultime spese</div><div class="card">'+(r.length?r.map(expRow).join(''):'<div class="empty">Nessuna spesa. Premi Nuova spesa.</div>')+'</div></div>'}
+function home(){var me=currentMember?currentMember.name:data.people[0],ve=visibleExpenses();var r=ve.slice(0,6);var vt=ve.reduce(function(a,e){return a+e.amount},0);var vp=ve.filter(function(e){return e.paidBy===me}).reduce(function(a,e){return a+e.amount},0);return'<div class="content"><div class="grid"><div class="card"><div class="label">Spese totali</div><div class="value">'+euro(vt)+'</div></div><div class="card"><div class="label">Pagate da '+esc(me)+'</div><div class="value">'+euro(vp)+'</div></div></div><div class="card" style="margin-top:10px"><div class="label">'+esc(data.people[0])+' ↔ '+esc(data.people[1]||'Partner')+'</div><div class="balance">'+(net(data.people[0])>=0?'+':'−')+euro(Math.abs(net(data.people[0])))+'</div><div class="hint">'+esc(sentence())+'</div></div><div class="section">Azioni rapide</div><div class="quick"><button onclick="openExpense()"><span class="quickico quickadd">＋</span><b>Nuova spesa</b></button><button onclick="openIncome()"><span class="quickico">💰</span><b>Nuova entrata</b></button><button onclick="openPayment()"><span class="quickico">💸</span><b>Registra pagamento</b></button><button onclick="go(\'moves\')"><span class="quickico">📋</span><b>Storico</b></button></div><div class="section">Ultime spese</div><div class="card">'+(r.length?r.map(expRow).join(''):'<div class="empty">Nessuna spesa. Premi Nuova spesa.</div>')+'</div></div>'}
 function incomeRow(i){return'<div class="expense row"><div><div class="title">💰 '+esc(i.desc||'Entrata')+'</div><div class="meta">'+fmtDate(i.date)+' · entrata di <b>'+esc(i.member||'')+'</b></div></div><div style="text-align:right"><div class="amount pos">+'+euro(i.amount)+'</div><button class="danger" onclick="delIncome('+i.id+')">Elimina</button></div></div>'}
 function paymentRow(p){return'<div class="expense row"><div><div class="title">💸 '+esc(p.desc||'Pagamento')+'</div><div class="meta">'+fmtDate(p.date)+' · '+esc(p.from)+' → '+esc(p.to)+'</div></div><div style="text-align:right"><div class="amount">−'+euro(p.amount)+'</div></div></div>'}
 function periodRange(kind,year,part,start,end){
@@ -59,8 +74,8 @@ return html
 function yearSelect(year,fn){var y=new Date().getFullYear(),h='<select class="periodSelect" onchange="'+fn+'(this.value)">';for(var i=y-10;i<=y+1;i++)h+='<option value="'+i+'" '+(Number(year)===i?'selected':'')+'>'+i+'</option>';return h+'</select>'}
 function moves(){
 var a=[],now=new Date(),pr=periodRange(movePeriod,moveYear,movePart,moveStart,moveEnd);
-data.expenses.forEach(function(e){a.push({kind:'expense',date:e.date,obj:e})});
-data.incomes.forEach(function(i){a.push({kind:'income',date:i.date,obj:i})});
+data.expenses.filter(isVisibleExpense).forEach(function(e){a.push({kind:'expense',date:e.date,obj:e})});
+data.incomes.filter(function(i){return !currentMember||i.member===currentMember.name}).forEach(function(i){a.push({kind:'income',date:i.date,obj:i})});
 data.payments.forEach(function(p){a.push({kind:'payment',date:p.date,obj:p})});
 a=a.filter(function(x){var d=new Date(x.date+'T12:00:00');return d>=pr.s&&d<=pr.e});
 a.sort(function(x,y){return y.date.localeCompare(x.date)});
@@ -71,12 +86,14 @@ return'<div class="content"><div class="row"><div class="section">Movimenti</div
 function chart(){
 var now=new Date(),pr=periodRange(chartPeriod,chartYear,chartPart,chartStart,chartEnd),selected=chartCats.length>0;
 var ex=data.expenses.filter(function(e){
+  if(!isVisibleExpense(e))return false;
   var d=new Date(e.date+'T12:00:00');
   return d>=pr.s&&d<=pr.e &&
     (chartWho==='all'||String(e.paidBy||'').trim().toLowerCase()===String(chartWho||'').trim().toLowerCase()) &&
     (!selected||chartCats.indexOf(e.category)>=0)
 });
 var inc=data.incomes.filter(function(e){
+  if(currentMember&&e.member!==currentMember.name)return false;
   var d=new Date(e.date+'T12:00:00');
   return d>=pr.s&&d<=pr.e&&(chartWho==='all'||e.member===chartWho)
 });
