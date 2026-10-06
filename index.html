@@ -11,9 +11,18 @@ window.supabaseClient=supabaseClient;
 <script>
 (function(){
 var KEY='spese_condivise_v2';
-var data=load(),view='home',modal=null,payer='',split='equal',paymentFrom='',moveWho='all',moveCat='all',movePeriod='month',moveYear=new Date().getFullYear(),movePart=new Date().getMonth()+1,moveStart=today(),moveEnd=today(),chartPeriod='month',chartYear=new Date().getFullYear(),chartPart=new Date().getMonth()+1,chartStart=today(),chartEnd=today(),chartWho='all',chartCats=[],currentUser=null,currentMember=null,authReady=false,authBusy=false,authError='';
+var data=load(),view='home',modal=null,payer='',split='equal',paymentFrom='',moveWho='all',moveCat='all',movePeriod='month',moveYear=new Date().getFullYear(),movePart=new Date().getMonth()+1,moveStart=today(),moveEnd=today(),chartPeriod='month',chartYear=new Date().getFullYear(),chartPart=new Date().getMonth()+1,chartStart=today(),chartEnd=today(),chartWho='all',chartCats=[],currentUser=null,currentMember=null,authReady=false,authBusy=false,authError='',expenseType='common';
 function load(){var dflt={people:['Enrico','Claudia'],expenses:[],incomes:[],payments:[],categories:['Utenze','Spesa alimentare','Casa','Auto','Pasti fuori','Shopping','Viaggi','Spese Mediche','Svago','Regali','Mutuo','Altro']};try{var d=JSON.parse(localStorage.getItem(KEY)||'null');if(!d||typeof d!=='object')return dflt;if(!Array.isArray(d.people)||d.people.length<2)d.people=dflt.people.slice();if(!Array.isArray(d.expenses))d.expenses=[];if(!Array.isArray(d.incomes))d.incomes=[];if(!Array.isArray(d.payments))d.payments=[];if(!Array.isArray(d.categories)||!d.categories.length)d.categories=dflt.categories.slice();return d}catch(e){return dflt}}
-function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
+function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}var CATEGORY_GROUPS={
+common:['Utenze','Spesa alimentare','Casa','Mutuo','Altro'],
+personal:['Auto','Pasti fuori','Shopping','Viaggi','Spese Mediche','Svago','Regali','Altro']
+};
+function categoryGroup(c){
+if(CATEGORY_GROUPS.common.indexOf(c)>=0)return'common';
+if(CATEGORY_GROUPS.personal.indexOf(c)>=0)return'personal';
+return'common';
+}
+
 function euro(n){return new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(Number(n)||0)}
 function today(){return new Date().toISOString().slice(0,10)}
 function fmtDate(s){return new Date(s+'T12:00:00').toLocaleDateString('it-IT',{day:'2-digit',month:'short'})}
@@ -125,7 +134,67 @@ return'<div class="content"><div class="section">Andamento nel tempo</div><div c
 function balance(){var a=data.people[0],b=data.people[1],n=net(a);return'<div class="content"><div class="card"><div class="label">'+esc(a)+' ↔ '+esc(b)+'</div><div class="balance">'+(n>=0?'+':'−')+euro(Math.abs(n))+'</div><div class="hint">'+esc(sentence())+'</div><button class="btn primary full" style="margin-top:12px" onclick="openPayment()">💸 Registra pagamento</button></div><div class="section">Dettaglio spese condivise</div><div class="card">'+data.expenses.filter(function(e){return e.participants.indexOf(a)>=0&&e.participants.indexOf(b)>=0}).map(function(e){return'<div class="expense"><div class="row"><b>'+esc(e.desc)+'</b><b>'+euro(e.amount)+'</b></div><div class="meta">'+esc(e.paidBy)+' ha pagato · quota '+esc(a)+': '+euro(share(e,a))+' · quota '+esc(b)+': '+euro(share(e,b))+'</div></div>'}).join('')+'</div></div>'}
 function more(){return'<div class="content"><div class="section">Impostazioni</div><div class="card"><div class="row"><span><b>'+esc(data.people[0])+'</b><br><span class="meta">Soggetto principale</span></span><button class="btn secondary" onclick="openPeople()">Modifica</button></div><div class="row" style="margin-top:14px"><span><b>'+esc(data.people[1])+'</b><br><span class="meta">Persona condivisa</span></span><button class="btn secondary" onclick="openPeople()">Modifica</button></div></div><div class="section">Categorie</div><div class="card"><div class="row"><span><b>'+esc(data.people[0])+'</b><br><span class="meta">Persona principale</span></span><button class="btn secondary" onclick="openPeople()">Modifica</button></div><div class="row" style="margin-top:14px"><span><b>'+esc(data.people[1])+'</b><br><span class="meta">Persona condivisa</span></span><button class="btn secondary" onclick="openPeople()">Modifica</button></div></div><div class="section">Categorie</div><div class="card">'+data.categories.map(function(c){return'<span style="display:inline-block;padding:5px 8px;margin:3px;border-radius:20px;background:#edf2ef;font-size:11px">'+esc(c)+'</span>'}).join('')+'</div></div>'}
 function modalShell(t,b){return'<div class="modalbg" onclick="if(event.target===this)closeModal()"><div class="modal"><button class="close" onclick="closeModal()">×</button><h2>'+t+'</h2>'+b+'</div></div>'}
-function expenseModal(){payer=data.people[0];split='equal';return modalShell('Nuova spesa','<div class="form"><div class="field"><label>Importo</label><input id="ea" type="number" step="0.01" min="0" placeholder="0,00"></div><div class="field"><label>Descrizione</label><input id="ed" placeholder="Es. Supermercato"></div><div class="field"><label>Categoria</label><select id="ec">'+data.categories.map(function(c){return'<option>'+esc(c)+'</option>'}).join('')+'</select></div><div class="field"><label>Data</label><input id="edate" type="date" value="'+today()+'"></div><div class="field"><label>Pagata da</label><div class="choices">'+data.people.map(function(p,i){return'<button class="'+(i===0?'sel':'')+'" data-p="'+esc(p)+'">👤 '+esc(p)+'</button>'}).join('')+'</div></div><div class="field"><label>Divisa tra</label><div class="checks">'+data.people.map(function(p){return'<label class="sel"><input type="checkbox" value="'+esc(p)+'" checked> '+esc(p)+'</label>'}).join('')+'</div></div><div class="field"><label>Divisione</label><div class="choices"><button id="eq" class="sel" onclick="setSplit(\'equal\')">Quote uguali</button><button id="cu" onclick="setSplit(\'custom\')">Quote personalizzate</button></div></div><div id="shares"></div><div class="field"><label>Note</label><input id="en" placeholder="Opzionale"></div><button class="btn primary full" onclick="saveExpense()">Salva spesa</button></div>')}
+function expenseModal(){
+payer=data.people[0];
+split='equal';
+expenseType='common';
+
+var commonCats=data.categories.filter(function(c){return categoryGroup(c)==='common'});
+var personalCats=data.categories.filter(function(c){return categoryGroup(c)==='personal'||c==='Altro'});
+
+return modalShell('Nuova spesa','<div class="form">'+
+'<div class="field"><label>Importo</label><input id="ea" type="number" step="0.01" min="0" placeholder="0,00"></div>'+
+'<div class="field"><label>Descrizione</label><input id="ed" placeholder="Es. Supermercato"></div>'+
+'<div class="field"><label>Tipo di spesa</label><div class="choices">'+
+'<button id="typeCommon" class="sel" onclick="setExpenseType(\'common\')">🏠 Comune</button>'+
+'<button id="typeEnrico" onclick="setExpenseType(\'personal0\')">👤 '+esc(data.people[0])+'</button>'+
+'<button id="typeClaudia" onclick="setExpenseType(\'personal1\')">👤 '+esc(data.people[1])+'</button>'+
+'</div></div>'+
+'<div class="field"><label>Categoria</label><select id="ec">'+commonCats.map(function(c){return'<option>'+esc(c)+'</option>'}).join('')+'</select></div>'+
+'<div class="field"><label>Data</label><input id="edate" type="date" value="'+today()+'"></div>'+
+'<div class="field"><label>Pagata da</label><div class="choices">'+data.people.map(function(p,i){return'<button class="'+(i===0?'sel':'')+'" data-p="'+esc(p)+'">👤 '+esc(p)+'</button>'}).join('')+'</div></div>'+
+'<div class="field"><label>Divisa tra</label><div class="checks">'+data.people.map(function(p){return'<label class="sel"><input type="checkbox" value="'+esc(p)+'" checked> '+esc(p)+'</label>'}).join('')+'</div></div>'+
+'<div class="field"><label>Divisione</label><div class="choices"><button id="eq" class="sel" onclick="setSplit(\'equal\')">Quote uguali</button><button id="cu" onclick="setSplit(\'custom\')">Quote personalizzate</button></div></div>'+
+'<div id="shares"></div>'+
+'<div class="field"><label>Note</label><input id="en" placeholder="Opzionale"></div>'+
+'<button class="btn primary full" onclick="saveExpense()">Salva spesa</button></div>')
+}
+
+function setExpenseType(t){
+expenseType=t;
+
+var isCommon=t==='common';
+var personIndex=t==='personal1'?1:0;
+var cats=data.categories.filter(function(c){return isCommon?categoryGroup(c)==='common':(categoryGroup(c)==='personal'||c==='Altro')});
+var ec=document.getElementById('ec');
+
+if(ec){
+ec.innerHTML=cats.map(function(c){return'<option>'+esc(c)+'</option>'}).join('');
+}
+
+document.getElementById('typeCommon').classList.toggle('sel',t==='common');
+document.getElementById('typeEnrico').classList.toggle('sel',t==='personal0');
+document.getElementById('typeClaudia').classList.toggle('sel',t==='personal1');
+
+var personButtons=document.querySelectorAll('[data-p]');
+personButtons.forEach(function(b){
+var selected=isCommon?b.getAttribute('data-p')===payer:b.getAttribute('data-p')===data.people[personIndex];
+b.classList.toggle('sel',selected);
+});
+
+if(!isCommon){
+payer=data.people[personIndex];
+document.querySelectorAll('.checks input').forEach(function(x){
+x.checked=x.value===payer;
+x.parentElement.classList.toggle('sel',x.checked);
+});
+document.getElementById('eq').classList.add('sel');
+document.getElementById('cu').classList.remove('sel');
+split='equal';
+document.getElementById('shares').innerHTML='';
+}
+}
+
 function incomeModal(){return modalShell('Nuova entrata','<div class="form"><div class="field"><label>Importo</label><input id="ia" type="number" step="0.01"></div><div class="field"><label>Descrizione</label><input id="id" placeholder="Es. Stipendio"></div><div class="field"><label>Data</label><input id="idt" type="date" value="'+today()+'"></div><button class="btn primary full" onclick="saveIncome()">Salva entrata</button></div>')}
 function paymentModal(){paymentFrom=data.people[1];return modalShell('Registra pagamento','<div class="form"><div class="field"><label>Chi paga?</label><div class="choices"><button id="pf" class="sel" onclick="chooseFrom(\''+esc(data.people[1])+'\')">'+esc(data.people[1])+'</button><button id="pt" onclick="chooseFrom(\''+esc(data.people[0])+'\')">'+esc(data.people[0])+'</button></div></div><div class="field"><label>Importo</label><input id="pa" type="number" step="0.01"></div><div class="field"><label>Data</label><input id="pdt" type="date" value="'+today()+'"></div><div class="field"><label>Descrizione</label><input id="pd" placeholder="Es. Bonifico"></div><button class="btn primary full" onclick="savePayment()">Registra pagamento</button></div>')}
 function peopleModal(){return modalShell('Persone','<div class="form"><div class="field"><label>Persona principale</label><input id="p1" value="'+esc(data.people[0])+'"></div><div class="field"><label>Persona condivisa</label><input id="p2" value="'+esc(data.people[1])+'"></div><button class="btn primary full" onclick="savePeople()">Salva</button></div>')}
@@ -237,27 +306,43 @@ var fromM=ms.data.find(function(x){return x.name===paymentFrom}),toM=ms.data.fin
 var r=await supabaseClient.from('payments').insert({household_id:currentMember.household_id,from_member_id:fromM.id,to_member_id:toM.id,amount:a,date:document.getElementById('pdt').value,note:document.getElementById('pd').value||null});
 if(r.error)return alert('Errore nel salvataggio online: '+r.error.message);await syncFromServer();modal=null;render()
 }
+function askDelete(type,id){
+var labels={expense:'spesa',income:'entrata',payment:'pagamento'};
+var label=labels[type]||'elemento';
+var box=document.createElement('div');
+box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
+box.innerHTML='<div style="background:#fff;border-radius:18px;padding:22px;max-width:360px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25)"><h3 style="margin:0 0 10px">Eliminare '+label+'?</h3><p style="margin:0 0 20px;color:#666">Questa operazione non può essere annullata.</p><div style="display:flex;gap:10px"><button id="cancelDelete" style="flex:1;padding:12px;border:1px solid #ddd;border-radius:10px;background:#fff;font-weight:700">Annulla</button><button id="confirmDelete" style="flex:1;padding:12px;border:0;border-radius:10px;background:#c62828;color:#fff;font-weight:700">Elimina</button></div></div>';
+document.body.appendChild(box);
+document.getElementById('cancelDelete').onclick=function(){box.remove()};
+document.getElementById('confirmDelete').onclick=function(){
+box.remove();
+if(type==='expense')delExp(id,true);
+if(type==='income')delIncome(id,true);
+if(type==='payment')delPayment(id,true);
+};
+}
+
 function savePeople(){var a=document.getElementById('p1').value.trim(),b=document.getElementById('p2').value.trim();if(!a||!b)return alert('Inserisci entrambi i nomi.');data.people=[a,b];save();closeModal()}
-async function delExp(id){
-if(!confirm('Eliminare la spesa?'))return;
+async function delExp(id,confirmed){
+if(!confirmed){askDelete('expense',id);return;}
 var r=await supabaseClient.from('expenses').delete().eq('id',id).eq('household_id',currentMember.household_id);
 if(r.error)return alert('Errore nell\'eliminazione online: '+r.error.message);
 await syncFromServer();render()
 }
-async function delIncome(id){
-if(!confirm("Eliminare l'entrata?"))return;
+async function delIncome(id,confirmed){
+if(!confirmed){askDelete('income',id);return;}
 if(!currentMember)return;
 var r=await supabaseClient.from('incomes').delete().eq('id',id).eq('household_id',currentMember.household_id);
 if(r.error)return alert("Errore nell'eliminazione online: "+r.error.message);
 await syncFromServer();render()
 }
-async function delPayment(id){
-if(!confirm('Eliminare il pagamento?'))return;
+async function delPayment(id,confirmed){
+if(!confirmed){askDelete('payment',id);return;}
 if(!currentMember)return;
 var r=await supabaseClient.from('payments').delete().eq('id',id).eq('household_id',currentMember.household_id);
 if(r.error)return alert("Errore nell'eliminazione online: "+r.error.message);
 await syncFromServer();render()
 }
-window.login=login;window.logout=logout;window.openExpense=openExpense;window.openIncome=openIncome;window.openPayment=openPayment;window.openPeople=openPeople;window.closeModal=closeModal;window.go=go;window.setMoveWho=setMoveWho;window.setMoveCat=setMoveCat;window.setChartPeriod=setChartPeriod;window.setChartWho=setChartWho;window.setChartCat=setChartCat;window.setSplit=setSplit;window.saveExpense=saveExpense;window.saveIncome=saveIncome;window.savePayment=savePayment;window.chooseFrom=chooseFrom;window.savePeople=savePeople;window.delExp=delExp;window.delIncome=delIncome;window.delPayment=delPayment;window.setMovePeriod=setMovePeriod;window.setMovePeriodPart=setMovePeriodPart;window.setMovePeriodYear=setMovePeriodYear;window.setMovePeriodStart=setMovePeriodStart;window.setMovePeriodEnd=setMovePeriodEnd;window.setChartPeriodPart=setChartPeriodPart;window.setChartPeriodYear=setChartPeriodYear;window.setChartPeriodStart=setChartPeriodStart;window.setChartPeriodEnd=setChartPeriodEnd;window.setChartCatByIndex=setChartCatByIndex;
+window.login=login;window.logout=logout;window.openExpense=openExpense;window.openIncome=openIncome;window.openPayment=openPayment;window.openPeople=openPeople;window.closeModal=closeModal;window.go=go;window.setMoveWho=setMoveWho;window.setMoveCat=setMoveCat;window.setChartPeriod=setChartPeriod;window.setChartWho=setChartWho;window.setChartCat=setChartCat;window.setSplit=setSplit;window.setExpenseType=setExpenseType;window.saveExpense=saveExpense;window.saveIncome=saveIncome;window.savePayment=savePayment;window.chooseFrom=chooseFrom;window.savePeople=savePeople;window.delExp=delExp;window.delIncome=delIncome;window.delPayment=delPayment;window.askDelete=askDelete;window.setMovePeriod=setMovePeriod;window.setMovePeriodPart=setMovePeriodPart;window.setMovePeriodYear=setMovePeriodYear;window.setMovePeriodStart=setMovePeriodStart;window.setMovePeriodEnd=setMovePeriodEnd;window.setChartPeriodPart=setChartPeriodPart;window.setChartPeriodYear=setChartPeriodYear;window.setChartPeriodStart=setChartPeriodStart;window.setChartPeriodEnd=setChartPeriodEnd;window.setChartCatByIndex=setChartCatByIndex;
 supabaseClient.auth.onAuthStateChange(function(){setTimeout(loadAuthUser,0)});loadAuthUser();try{render()}catch(e){document.getElementById('root').innerHTML='<div style="padding:24px;font-family:system-ui"><h2>Errore nell\'app</h2><p>La pagina è stata caricata ma i dati locali non sono compatibili.</p><button onclick="localStorage.removeItem(\'spese_condivise_v2\');location.reload()" style="padding:12px 16px;border:0;border-radius:10px;background:#173f35;color:#fff;font-weight:700">Ripristina app</button></div>'}
 })();</script></body></html>
