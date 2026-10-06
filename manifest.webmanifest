@@ -1,8 +1,8 @@
 {
-  "name":"Spese Condivise",
-  "short_name":"Spese",
-  "start_url":"/Spese-Comuni/",
-  "scope":"/Spese-Comuni/",
+  "name":"Gestore delle Spese",
+  "short_name":"Gestore Spese",
+  "start_url":"/Gestore-delle-Spese/",
+  "scope":"/Gestore-delle-Spese/",
   "display":"standalone",
   "background_color":"#f5f7f5",
   "theme_color":"#173f35",
